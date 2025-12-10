@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <title>공사 견적 프로그램</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<header class="app-header">
+    <h1>공사 견적 프로그램</h1>
+</header>
+
+<nav class="tab-nav">
+    <button class="tab-button active" data-target="page-material-input">자재 입력</button>
+    <button class="tab-button" data-target="page-material-list">자재 목록</button>
+    <button class="tab-button" data-target="page-estimate">임시 견적</button>
+</nav>
+
+<main class="app-main">
+
+    <!-- PAGE 1: 자재 입력 -->
+    <section id="page-material-input" class="page active">
+        <h2>자재 입력</h2>
+
+        <!-- 검색 -->
+        <div class="card">
+            <label class="form-label">
+                자재 검색 (2글자 이상 입력)
+                <input type="text" id="material-search" placeholder="예) 현무" />
+            </label>
+        </div>
+
+        <!-- 자재 입력 -->
+        <div class="card">
+            <label class="form-label">
+                자재 명칭
+                <input type="text" id="material-name" placeholder="예) 현무암 부정형 50T" />
+            </label>
+
+            <h3>단위 및 가격</h3>
+
+            <div class="unit-table-wrapper">
+                <table class="unit-table">
+                    <thead>
+                        <tr>
+                            <th>단위명</th>
+                            <th>자재가격</th>
+                            <th>운반비</th>
+                            <th>총입고</th>
+                            <th>판매(제외)</th>
+                            <th>판매(포함)</th>
+                            <th>삭제</th>
+                        </tr>
+                    </thead>
+                    <tbody id="unit-table-body"></tbody>
+                </table>
+            </div>
+
+            <div class="unit-button-row">
+                <div class="left-buttons">
+                    <button id="add-unit-row" class="sub-button">+ 단위 추가</button>
+                    <button id="remove-unit-row" class="danger-button">- 단위 삭제</button>
+                </div>
+                <button id="reset-material-input" class="sub-button">초기화</button>
+                <button id="save-material" class="primary-button">자재 저장</button>
+            </div>
+        </div>
+
+        <!-- 자재 입력 탭 하단 자재 목록 -->
+        <div class="card">
+            <h3>자재 목록 (명칭 클릭 → 불러오기)</h3>
+
+            <div class="material-table-wrapper">
+                <table class="material-table">
+                    <thead>
+                        <tr>
+                            <th>명칭</th>
+                            <th>단위</th>
+                            <th>자재가</th>
+                            <th>운반비</th>
+                            <th>총입고</th>
+                            <th>판매(제외)</th>
+                            <th>판매(포함)</th>
+                            <th>삭제</th> <!-- 🔥 새로 추가된 열 -->
+                        </tr>
+                    </thead>
+                    <tbody id="material-input-list-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+    </section>
+
+    <!-- 나머지 페이지는 변경 없음 -->
+    <!-- PAGE 2 -->
+    <section id="page-material-list" class="page">
+        <h2>자재 목록</h2>
+
+        <div class="card">
+
+            <div class="material-list-header">
+                <strong>보유 자재</strong>
+
+                <div class="button-group">
+                    <button id="calc-selected" class="primary-button small">선택 계산</button>
+                    <button id="edit-selected" class="danger-button small">수정</button>
+                </div>
+            </div>
+
+            <div class="material-table-wrapper">
+                <table class="material-table">
+                    <thead>
+                        <tr>
+                            <th>선택</th>
+                            <th>명칭</th>
+                            <th>단위</th>
+                            <th>판매(제외)</th>
+                            <th>판매(포함)</th>
+                            <th>수량</th>
+                        </tr>
+                    </thead>
+                    <tbody id="material-list-body"></tbody>
+                </table>
+            </div>
+
+            <div class="result-row">
+                선택 자재 합계: <span id="selected-total">0</span> 원
+            </div>
+
+            <div class="button-row">
+                <button id="reset-selected" class="sub-button">초기화</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- PAGE 3 -->
+    <section id="page-estimate" class="page">
+        <h2>임시 견적</h2>
+
+        <div class="card">
+            <h3>견적 기본 정보</h3>
+
+            <label class="form-label">
+                견적 이름
+                <input type="text" id="estimate-name" />
+            </label>
+
+            <label class="form-label">
+                견적 일자
+                <input type="date" id="estimate-date" />
+            </label>
+
+            <label class="form-label">
+                전화번호
+                <input type="tel" id="estimate-phone" />
+            </label>
+        </div>
+
+        <div class="card">
+            <h3>공사 개략 내용</h3>
+            <textarea id="estimate-summary" rows="3"></textarea>
+        </div>
+
+        <div class="card">
+            <button id="calc-estimate" class="primary-button" style="width:100%; margin-bottom:10px;">
+                임시 견적 계산
+            </button>
+            <div id="estimate-result" class="estimate-result"></div>
+        </div>
+    </section>
+
+</main>
+
+<!-- 수정 모달은 동일 -->
+<div id="edit-modal" class="modal hidden"> ... </div>
+
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,243 @@
+/* 기본 설정 */
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    background-color: #f5f5f5;
+    color: #222;
+}
+
+/* 헤더 */
+.app-header {
+    background-color: #1e88e5;
+    color: #fff;
+    padding: 12px 16px;
+    text-align: center;
+}
+
+/* 탭 메뉴 */
+.tab-nav {
+    display: flex;
+    background: #fff;
+    border-bottom: 1px solid #ddd;
+}
+
+.tab-button {
+    flex: 1;
+    padding: 10px 4px;
+    border: none;
+    background: #fff;
+    font-size: 14px;
+}
+
+.tab-button.active {
+    background: #e3f2fd;
+    font-weight: bold;
+}
+
+/* 메인 영역 */
+.app-main {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 10px;
+}
+
+.page {
+    display: none;
+}
+.page.active {
+    display: block;
+}
+
+/* 카드 */
+.card {
+    background: #fff;
+    border-radius: 6px;
+    padding: 14px;
+    margin-bottom: 14px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.10);
+}
+
+/* 입력 라벨 */
+.form-label {
+    display: block;
+    margin-bottom: 10px;
+    font-size: 13px;
+}
+
+.form-label input,
+textarea {
+    width: 100%;
+    padding: 7px;
+    margin-top: 4px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+/* 버튼 */
+.primary-button,
+.sub-button,
+.danger-button {
+    padding: 8px 14px;
+    border: none;
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+.primary-button {
+    background-color: #1e88e5;
+    color: #fff;
+}
+
+.sub-button {
+    background: #ddd;
+    color: #000;
+}
+
+.danger-button {
+    background: #d32f2f;
+    color: #fff;
+}
+
+.small {
+    padding: 6px 10px;
+    font-size: 12px;
+}
+
+/* 테이블 */
+.unit-table-wrapper,
+.material-table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.unit-table,
+.material-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+.unit-table th,
+.unit-table td,
+.material-table th,
+.material-table td {
+    border: 1px solid #ccc;
+    padding: 5px;
+    text-align: center;
+}
+
+/* 자재 목록에서 명칭 클릭 가능 표시 */
+.material-table td.clickable {
+    color: #1e88e5;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+/* 자재 입력 – 단위 버튼 영역 */
+.unit-button-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 12px;
+}
+
+.left-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+/* 자재 목록 페이지 헤더 */
+.material-list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.button-group {
+    display: flex;
+    gap: 6px;
+}
+
+/* 합계 표시 */
+.result-row {
+    margin-top: 12px;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+/* 공통 버튼 행 */
+.button-row {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 10px;
+}
+
+/* 모달 */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.45);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 50;
+}
+
+.modal.hidden {
+    display: none;
+}
+
+.modal-content {
+    width: 92%;
+    max-width: 380px;
+    background: #fff;
+    padding: 16px;
+    border-radius: 6px;
+}
+
+.modal-buttons {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 14px;
+}
+
+/* 읽기전용 명칭 박스 */
+.readonly-box {
+    width: 100%;
+    padding: 7px 6px;
+    background: #f0f0f0;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+/* 견적 결과 */
+.estimate-result {
+    background: #f9f9f9;
+    padding: 8px;
+    white-space: pre-line;
+}
+
+/* ======================================================= */
+/* 🔥 추가: 자재 입력 탭 삭제 버튼 스타일 */
+/* ======================================================= */
+.material-delete-btn {
+    background: #d32f2f;
+    color: #fff;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.material-delete-btn:hover {
+    background: #b71c1c;
+}
