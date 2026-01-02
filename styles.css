@@ -241,31 +241,3 @@ textarea {
 .material-delete-btn:hover {
     background: #b71c1c;
 }
-
-/* =============================== */
-/* 📱 모바일(iPhone) 테이블 가독성 개선 */
-/* =============================== */
-@media (max-width: 768px) {
-
-    .unit-table th,
-    .unit-table td,
-    .material-table th,
-    .material-table td {
-        padding: 10px 8px;     /* ← 터치하기 좋게 */
-        font-size: 14px;       /* ← 글씨 키움 */
-        line-height: 1.4;      /* ← 답답함 해소 */
-    }
-
-    /* 입력창도 같이 키워줌 */
-    .unit-table input,
-    .material-table input {
-        padding: 8px;
-        font-size: 14px;
-    }
-
-    /* 삭제 버튼, 체크박스 터치 영역 확보 */
-    .unit-delete,
-    .mat-check {
-        transform: scale(1.2);
-    }
-}
