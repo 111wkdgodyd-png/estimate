@@ -1,336 +1,68 @@
-/* ================================================================= */
-/* 공통: 숫자 천단위 콤마 */
-/* ================================================================= */
-function addComma(v) {
-    v = v.replace(/[^0-9]/g, "");
-    return v ? Number(v).toLocaleString() : "";
-}
-
-function removeComma(v) {
-    return Number(v.replace(/,/g, "")) || 0;
-}
-
-/* ================================================================= */
-/* 탭 전환 */
-/* ================================================================= */
-const tabButtons = document.querySelectorAll(".tab-button");
-const pages = document.querySelectorAll(".page");
-
-tabButtons.forEach((btn) => {
-    btn.addEventListener("click", () => {
-        const target = btn.dataset.target;
-
-        tabButtons.forEach((b) => b.classList.remove("active"));
-        btn.classList.add("active");
-
-        pages.forEach((p) => p.classList.toggle("active", p.id === target));
-    });
-});
-
-/* ================================================================= */
-/* 자재 데이터 로딩 */
-/* ================================================================= */
-let materials = JSON.parse(localStorage.getItem("materials") || "[]");
-let editingMaterialId = null; // ★ 자재 식별용 ID 저장
-
-function saveMaterials() {
-    localStorage.setItem("materials", JSON.stringify(materials));
-}
-
-/* ================================================================= */
-/* 자재 입력: 단위 행 생성 */
-/* ================================================================= */
-const unitBody = document.getElementById("unit-table-body");
-
-function createUnitRow() {
-    const tr = document.createElement("tr");
-
-    tr.innerHTML = `
-        <td><input type="text" class="unit-name" /></td>
-        <td><input type="text" class="unit-material-price price-input" /></td>
-        <td><input type="text" class="unit-delivery-price price-input" /></td>
-        <td><input type="text" class="unit-total-purchase" readonly /></td>
-        <td><input type="text" class="unit-sell-ex price-input" /></td>
-        <td><input type="text" class="unit-sell-in price-input" /></td>
-        <td><button class="sub-button unit-delete">X</button></td>
-    `;
-
-    const mat = tr.querySelector(".unit-material-price");
-    const del = tr.querySelector(".unit-delivery-price");
-    const tot = tr.querySelector(".unit-total-purchase");
-
-    tr.querySelectorAll(".price-input").forEach((input) => {
-        input.addEventListener("input", () => {
-            input.value = addComma(input.value);
-            tot.value = addComma(String(removeComma(mat.value) + removeComma(del.value)));
-        });
-    });
-
-    tr.querySelector(".unit-delete").addEventListener("click", () => tr.remove());
-
-    return tr;
-}
-
-/* 초기 단위 1행 추가 */
-unitBody.appendChild(createUnitRow());
-
-/* + 단위 추가 */
-document.getElementById("add-unit-row").addEventListener("click", () => {
-    unitBody.appendChild(createUnitRow());
-});
-
-/* - 단위 삭제 */
-document.getElementById("remove-unit-row").addEventListener("click", () => {
-    const rows = unitBody.querySelectorAll("tr");
-    if (rows.length <= 1) {
-        alert("단위는 최소 1개 이상 필요합니다.");
-        return;
-    }
-    rows[rows.length - 1].remove();
-});
-
-/* ================================================================= */
-/* 자재 입력 초기화 기능 */
-/* ================================================================= */
-function resetMaterialInput() {
-    editingMaterialId = null; // 새 입력 모드로 전환
-    document.getElementById("material-name").value = "";
-
-    unitBody.innerHTML = "";
-    unitBody.appendChild(createUnitRow());
-    document.getElementById("material-name").focus();
-}
-
-document.getElementById("reset-material-input").addEventListener("click", resetMaterialInput);
-
-/* ================================================================= */
-/* 자재 저장 */
-/* ================================================================= */
-document.getElementById("save-material").addEventListener("click", () => {
-    const name = document.getElementById("material-name").value.trim();
-    if (!name) {
-        alert("자재 명칭을 입력해주세요.");
-        return;
-    }
-
-    const rows = unitBody.querySelectorAll("tr");
-    const units = [];
-
-    rows.forEach((row) => {
-        const unitName = row.querySelector(".unit-name").value.trim();
-        if (!unitName) return;
-
-        const material = removeComma(row.querySelector(".unit-material-price").value);
-        const delivery = removeComma(row.querySelector(".unit-delivery-price").value);
-
-        units.push({
-            unitName,
-            materialPrice: material,
-            deliveryPrice: delivery,
-            purchase: material + delivery,
-            sellEx: removeComma(row.querySelector(".unit-sell-ex").value),
-            sellIn: removeComma(row.querySelector(".unit-sell-in").value),
-        });
-    });
-
-    if (!units.length) {
-        alert("단위는 최소 1개 이상 입력해야 합니다.");
-        return;
-    }
-
-    /* 🌟 ID 기반 저장 로직 */
-    if (editingMaterialId) {
-        const idx = materials.findIndex(m => m.id === editingMaterialId);
-        if (idx >= 0) {
-            materials[idx].name = name;
-            materials[idx].units = units;
-        }
-    } else {
-        materials.push({
-            id: Date.now(),
-            name,
-            units
-        });
-    }
-
-    saveMaterials();
-    renderMaterialList();
-    renderInputMaterialList();
-
-    alert("저장되었습니다.");
-
-    resetMaterialInput();
-});
-
-/* ================================================================= */
-/* 입력 탭 — 자재 목록 표시 */
-/* ================================================================= */
-const inputListBody = document.getElementById("material-input-list-body");
-
-function renderInputMaterialList(keyword = "") {
-    inputListBody.innerHTML = "";
-
-    materials.forEach((m) => {
-        m.units.forEach((u) => {
-            const match =
-                !keyword ||
-                m.name.includes(keyword) ||
-                u.unitName.includes(keyword);
-
-            if (!match) return;
-
-            const tr = document.createElement("tr");
-            tr.innerHTML = `
-                <td class="clickable">${m.name}</td>
-                <td>${u.unitName}</td>
-                <td>${u.materialPrice.toLocaleString()}</td>
-                <td>${u.deliveryPrice.toLocaleString()}</td>
-                <td>${u.purchase.toLocaleString()}</td>
-                <td>${u.sellEx?.toLocaleString() || "-"}</td>
-                <td>${u.sellIn?.toLocaleString() || "-"}</td>
-                <td><button class="material-delete-btn" data-id="${m.id}">삭제</button></td>
-            `;
-
-            /* 📌 명칭 클릭 → 불러오기 */
-            tr.children[0].addEventListener("click", () => loadMaterialToInput(m.id));
-
-            /* 📌 자재 삭제 버튼 */
-            tr.querySelector(".material-delete-btn").addEventListener("click", () => {
-                materials = materials.filter(mat => mat.id !== m.id);
-                saveMaterials();
-                renderInputMaterialList();
-                renderMaterialList();
-            });
-
-            inputListBody.appendChild(tr);
-        });
-    });
-}
-
-renderInputMaterialList();
-
-/* 검색 기능 */
-document.getElementById("material-search").addEventListener("input", (e) => {
-    const keyword = e.target.value.trim();
-    renderInputMaterialList(keyword.length < 2 ? "" : keyword);
-});
-
-/* ================================================================= */
-/* 명칭 클릭 → 자재 입력창 자동 로드 */
-/* ================================================================= */
-function loadMaterialToInput(materialId) {
-    const target = materials.find((m) => m.id === materialId);
-    if (!target) return;
-
-    editingMaterialId = target.id;
-
-    document.getElementById("material-name").value = target.name;
-
-    /* 기존 단위 행 비우고 채우기 */
-    unitBody.innerHTML = "";
-
-    target.units.forEach((u) => {
-        const tr = createUnitRow();
-
-        tr.querySelector(".unit-name").value = u.unitName;
-        tr.querySelector(".unit-material-price").value = u.materialPrice.toLocaleString();
-        tr.querySelector(".unit-delivery-price").value = u.deliveryPrice.toLocaleString();
-        tr.querySelector(".unit-total-purchase").value = u.purchase.toLocaleString();
-        tr.querySelector(".unit-sell-ex").value = u.sellEx?.toLocaleString() || "";
-        tr.querySelector(".unit-sell-in").value = u.sellIn?.toLocaleString() || "";
-
-        unitBody.appendChild(tr);
-    });
-
-    document.getElementById("material-name").focus();
-}
-
-/* ================================================================= */
-/* 자재 목록 탭 — 렌더링 */
-/* ================================================================= */
-const materialListBody = document.getElementById("material-list-body");
-
-function renderMaterialList() {
-    materialListBody.innerHTML = "";
-
-    materials.forEach((m) => {
-        m.units.forEach((u) => {
-            const tr = document.createElement("tr");
-
-            tr.innerHTML = `
-                <td><input type="checkbox" class="mat-check" /></td>
-                <td>${m.name}</td>
-                <td>${u.unitName}</td>
-                <td>${u.sellEx?.toLocaleString() || "-"}</td>
-                <td>${u.sellIn?.toLocaleString() || "-"}</td>
-                <td><input type="text" class="mat-qty" /></td>
-           `;
-
-            const qtyInput = tr.querySelector(".mat-qty");
-            const checkbox = tr.querySelector(".mat-check");
-
-            qtyInput.addEventListener("input", (e) => {
-                e.target.value = addComma(e.target.value);
-                checkbox.checked = removeComma(e.target.value) > 0;
-            });
-
-            materialListBody.appendChild(tr);
-        });
-    });
-}
-
-renderMaterialList();
-
-/* ================================================================= */
-/* 선택 계산 */
-/* ================================================================= */
-document.getElementById("calc-selected").addEventListener("click", () => {
-    let total = 0;
-
-    materialListBody.querySelectorAll("tr").forEach((row) => {
-        const checkbox = row.querySelector(".mat-check");
-        if (!checkbox || !checkbox.checked) return;
-
-        const qty = removeComma(row.querySelector(".mat-qty").value) || 0;
-
-        const sellIn = row.children[4].textContent.replace(/,/g, "");
-        const sellEx = row.children[3].textContent.replace(/,/g, "");
-
-        const price = Number(sellIn) || Number(sellEx) || 0;
-
-        total += price * qty;
-    });
-
-    document.getElementById("selected-total").textContent = total.toLocaleString();
-});
-
-/* ================================================================= */
-/* 초기화 버튼 */
-/* ================================================================= */
-document.getElementById("reset-selected").addEventListener("click", () => {
-    materialListBody.querySelectorAll("tr").forEach((row) => {
-        const checkbox = row.querySelector(".mat-check");
-        const qtyInput = row.querySelector(".mat-qty");
-        if (checkbox) checkbox.checked = false;
-        if (qtyInput) qtyInput.value = "";
-    });
-    document.getElementById("selected-total").textContent = "0";
-});
-
-/* ================================================================= */
-/* 임시 견적 */
-/* ================================================================= */
-document.getElementById("calc-estimate").addEventListener("click", () => {
-    const name = document.getElementById("estimate-name").value.trim();
-    const date = document.getElementById("estimate-date").value;
-    const phone = document.getElementById("estimate-phone").value.trim();
-    const summary = document.getElementById("estimate-summary").value.trim();
-
-    let out = "";
-    out += `견적 이름: ${name || "(입력 없음)"}\n`;
-    out += `견적 일자: ${date || "(입력 없음)"}\n`;
-    out += `전화번호: ${phone || "(입력 없음)"}\n\n`;
-    out += `공사 개략 내용:\n${summary || "(입력 없음)"}`;
-
-    document.getElementById("estimate-result").textContent = out;
-});
+"use strict";
+const $=id=>document.getElementById(id), DB="materialPriceProgram", STORE="materials", BACKUPS="backups", META="meta";
+let db, materials=[], inlineEditingKey=null, loadedMaterialId=null, pending=null, toastTimer;
+const uid=()=>crypto.randomUUID?.()||`${Date.now()}-${Math.random()}`;
+const clone=v=>JSON.parse(JSON.stringify(v));
+const norm=v=>String(v??"").trim().replace(/\s+/g," ").toLocaleLowerCase("ko-KR");
+const num=v=>{const n=Number(String(v??0).replace(/,/g,""));return Number.isFinite(n)&&n>=0?Math.round(n):0};
+const comma=v=>{const s=String(v??"").replace(/\D/g,"");return s?Number(s).toLocaleString("ko-KR"):""};
+const money=v=>num(v).toLocaleString("ko-KR");
+const now=()=>new Date().toISOString();
+const dateText=v=>v?new Intl.DateTimeFormat("ko-KR",{year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"}).format(new Date(v)):"-";
+const fileDate=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`};
+function toast(msg,error=false){clearTimeout(toastTimer);$("toast").textContent=msg;$("toast").style.background=error?"#b91c1c":"#1f2937";$("toast").classList.remove("hidden");toastTimer=setTimeout(()=>$("toast").classList.add("hidden"),3600)}
+
+function openDb(){return new Promise((resolve,reject)=>{const r=indexedDB.open(DB,1);r.onupgradeneeded=()=>{const d=r.result;if(!d.objectStoreNames.contains(STORE))d.createObjectStore(STORE,{keyPath:"id"});if(!d.objectStoreNames.contains(BACKUPS))d.createObjectStore(BACKUPS,{keyPath:"id"});if(!d.objectStoreNames.contains(META))d.createObjectStore(META,{keyPath:"key"})};r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);r.onblocked=()=>reject(new Error("다른 화면의 프로그램을 닫고 다시 시도해주세요."))})}
+function req(r){return new Promise((resolve,reject)=>{r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)})}
+function done(t){return new Promise((resolve,reject)=>{t.oncomplete=resolve;t.onerror=()=>reject(t.error);t.onabort=()=>reject(t.error)})}
+async function all(store){const t=db.transaction(store,"readonly"),p=done(t),v=await req(t.objectStore(store).getAll());await p;return v}
+async function meta(key){const t=db.transaction(META,"readonly"),p=done(t),v=await req(t.objectStore(META).get(key));await p;return v?.value}
+async function setMeta(key,value){const t=db.transaction(META,"readwrite");t.objectStore(META).put({key,value});await done(t)}
+async function putMany(items){const t=db.transaction(STORE,"readwrite"),s=t.objectStore(STORE);items.forEach(x=>s.put(x));await done(t)}
+async function removeOne(id){const t=db.transaction(STORE,"readwrite");t.objectStore(STORE).delete(id);await done(t)}
+async function replaceAll(items){const t=db.transaction(STORE,"readwrite"),s=t.objectStore(STORE);s.clear();items.forEach(x=>s.put(x));await done(t)}
+async function backup(reason,snapshot=materials){const t=db.transaction(BACKUPS,"readwrite");t.objectStore(BACKUPS).put({id:uid(),reason,createdAt:now(),materials:clone(snapshot)});await done(t);const list=(await all(BACKUPS)).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));if(list.length>10){const c=db.transaction(BACKUPS,"readwrite"),s=c.objectStore(BACKUPS);list.slice(10).forEach(x=>s.delete(x.id));await done(c)}}
+
+function legacyMaterial(m){if(!m?.name||!Array.isArray(m.units))return null;const units=m.units.map(u=>{if(!u?.unitName)return null;const materialPrice=num(u.materialPrice),deliveryPrice=num(u.deliveryPrice);return{id:String(u.id||uid()),unitName:String(u.unitName).trim(),materialPrice,deliveryPrice,purchase:materialPrice+deliveryPrice,sellEx:num(u.sellEx),sellIn:num(u.sellIn)}}).filter(Boolean);if(!units.length)return null;const t=now();return{id:String(m.id||uid()),name:String(m.name).trim(),units,createdAt:m.createdAt||t,updatedAt:m.updatedAt||t}}
+async function migrate(){if(await meta("legacyDone"))return null;const existing=await all(STORE);if(existing.length){await setMeta("legacyDone",true);return null}let old=[];try{old=JSON.parse(localStorage.getItem("materials")||"[]")}catch{}const converted=Array.isArray(old)?old.map(legacyMaterial).filter(Boolean):[];if(converted.length){await backup("기존 자료 이전",converted);await putMany(converted)}await setMeta("legacyDone",true);return converted.length?{m:converted.length,u:converted.reduce((a,x)=>a+x.units.length,0)}:null}
+function entries(){return materials.flatMap(m=>m.units.map(u=>({m,u}))).sort((a,b)=>num(a.u.order)-num(b.u.order))}
+function nextOrder(){return entries().reduce((max,x)=>Math.max(max,num(x.u.order)),0)+1}
+function hideMaterialResults(){$("materialResults").classList.add("hidden");$("materialResults").innerHTML=""}
+function loadMaterial(id){const m=materials.find(x=>String(x.id)===String(id));if(!m)return;loadedMaterialId=m.id;$("materialName").value=m.name;$("unitBody").innerHTML="";m.units.sort((a,b)=>num(a.order)-num(b.order)).forEach(u=>$("unitBody").append(unitRow(u)));$("saveBtn").textContent="수정 및 단위 저장";hideMaterialResults()}
+function searchMaterials(){const q=norm($("materialName").value),box=$("materialResults");box.innerHTML="";if(loadedMaterialId){loadedMaterialId=null;$("unitBody").innerHTML="";$("unitBody").append(unitRow())}$("saveBtn").textContent="자재 저장";if(!q){box.classList.add("hidden");return}const found=materials.filter(m=>norm(m.name).includes(q));if(!found.length){const empty=document.createElement("div");empty.className="material-result-empty";empty.textContent="검색 결과 없음";box.append(empty)}else found.forEach(m=>{const button=document.createElement("button");button.type="button";button.className="material-result";button.innerHTML=`<strong></strong><span>${m.units.length}건</span>`;button.querySelector("strong").textContent=m.name;button.onclick=()=>loadMaterial(m.id);box.append(button)});box.classList.remove("hidden")}
+async function reload(){materials=await all(STORE);const list=entries(),seen=new Set(),changed=list.some(({u})=>{const order=Number(u.order),bad=!Number.isFinite(order)||order<=0||seen.has(order);seen.add(order);return bad});if(changed){list.forEach(({u},i)=>u.order=i+1);await putMany(materials)}render()}
+
+function unitRow(u={}){const tr=document.createElement("tr");tr.dataset.id=u.id||uid();const defs=[["unit-name",u.unitName||"","단위명"],["material-price price-input",u.materialPrice,"자재가격"],["delivery-price price-input",u.deliveryPrice,"운반비"],["purchase",u.purchase,"총입고"],["sell-ex price-input",u.sellEx,"판매 제외"],["sell-in price-input",u.sellIn,"판매 포함"]];defs.forEach(([cls,val,label],i)=>{const td=document.createElement("td"),input=document.createElement("input");td.dataset.label=label;input.type="text";input.className=cls;input.setAttribute("aria-label",label);if(i===3)input.readOnly=true;input.value=i===0?val:(num(val)?money(val):"");td.append(input);tr.append(td)});const td=document.createElement("td"),b=document.createElement("button");td.dataset.label="삭제";b.className="unit-delete";b.type="button";b.textContent="×";b.onclick=()=>{$("unitBody").children.length<=1?toast("단위는 최소 1개 필요합니다.",true):tr.remove()};td.append(b);tr.append(td);const mat=tr.querySelector(".material-price"),del=tr.querySelector(".delivery-price"),total=tr.querySelector(".purchase");tr.querySelectorAll(".price-input").forEach(input=>input.oninput=()=>{input.value=comma(input.value);total.value=money(num(mat.value)+num(del.value))});return tr}
+function reset(focus=false){loadedMaterialId=null;$("materialName").value="";$("unitBody").innerHTML="";$("unitBody").append(unitRow());$("saveBtn").textContent="자재 저장";hideMaterialResults();if(focus)$("materialName").focus()}
+function formData(){const name=$("materialName").value.trim();if(!name)throw new Error("자재 명칭을 입력해주세요.");const units=[],seen=new Set();$("unitBody").querySelectorAll("tr").forEach(tr=>{const unitName=tr.querySelector(".unit-name").value.trim();if(!unitName)return;const key=norm(unitName);if(seen.has(key))throw new Error(`같은 단위가 중복되었습니다: ${unitName}`);seen.add(key);const materialPrice=num(tr.querySelector(".material-price").value),deliveryPrice=num(tr.querySelector(".delivery-price").value);units.push({id:tr.dataset.id||uid(),unitName,materialPrice,deliveryPrice,purchase:materialPrice+deliveryPrice,sellEx:num(tr.querySelector(".sell-ex").value),sellIn:num(tr.querySelector(".sell-in").value)})});if(!units.length)throw new Error("단위를 최소 1개 입력해주세요.");return{name,units}}
+async function saveForm(){try{const data=formData(),existing=materials.find(m=>String(m.id)===String(loadedMaterialId))||materials.find(m=>norm(m.name)===norm(data.name)),t=now();if(existing){const oldIds=new Set(existing.units.map(u=>String(u.id))),submitted=new Map(data.units.filter(u=>oldIds.has(String(u.id))).map(u=>[String(u.id),u])),newUnits=data.units.filter(u=>!oldIds.has(String(u.id))),names=new Set(),combined=[...existing.units.map(u=>submitted.get(String(u.id))||u),...newUnits];for(const u of combined){const key=norm(u.unitName);if(names.has(key))throw new Error(`같은 단위가 중복되었습니다: ${u.unitName}`);names.add(key)}const anchor=Math.max(...existing.units.map(u=>num(u.order))),count=newUnits.length,changed=new Map();if(count)materials.forEach(m=>{let moved=false;m.units.forEach(u=>{if(num(u.order)>anchor){u.order=num(u.order)+count;moved=true}});if(moved)changed.set(m.id,m)});const units=existing.units.map(u=>{const fresh=submitted.get(String(u.id));return fresh?{...u,...fresh,order:u.order}:u});units.push(...newUnits.map((u,i)=>({...u,order:anchor+i+1})));const updated={...existing,name:data.name,units,updatedAt:t};changed.set(updated.id,updated);await backup(`자재 관리 수정 전: ${existing.name}`);await putMany([...changed.values()]);toast(newUnits.length?"새 단위를 같은 자재명 바로 아래에 추가했습니다.":"자재 정보를 수정했습니다.")}else{let order=nextOrder();await putMany([{id:uid(),...data,units:data.units.map(u=>({...u,order:order++})),createdAt:t,updatedAt:t}]);toast("새 자재가 목록 하단에 추가되었습니다.")}reset();await reload()}catch(e){toast(e.message||"저장에 실패했습니다.",true)}}
+async function deleteUnit(materialId,unitId){const m=materials.find(x=>x.id===materialId),u=m?.units.find(x=>x.id===unitId);if(!m||!u||!confirm(`‘${m.name} / ${u.unitName}’ 항목을 삭제할까요?`))return;await backup(`삭제 전: ${m.name} / ${u.unitName}`);if(m.units.length===1)await removeOne(m.id);else await putMany([{...m,units:m.units.filter(x=>x.id!==unitId),updatedAt:now()}]);inlineEditingKey=null;await reload();toast("삭제했습니다.")}
+function inlineInput(cls,value,label,numeric=false){const input=document.createElement("input");input.type="text";input.className=`inline-input ${cls}`;input.value=numeric?(num(value)?money(value):""):value;input.setAttribute("aria-label",label);if(numeric)input.oninput=()=>input.value=comma(input.value);return input}
+function inputCell(label,input){const td=document.createElement("td");td.dataset.label=label;td.className="inline-cell";td.append(input);return td}
+async function saveInline(materialId,unitId,row){try{const m=materials.find(x=>x.id===materialId),u=m?.units.find(x=>x.id===unitId);if(!m||!u)throw new Error("수정할 항목을 찾지 못했습니다.");const name=row.querySelector(".inline-name").value.trim(),unitName=row.querySelector(".inline-unit").value.trim();if(!name)throw new Error("자재 명칭을 입력해주세요.");if(!unitName)throw new Error("단위를 입력해주세요.");if(materials.some(x=>x.id!==m.id&&norm(x.name)===norm(name)))throw new Error("같은 자재명이 있습니다.");if(m.units.some(x=>x.id!==u.id&&norm(x.unitName)===norm(unitName)))throw new Error("같은 단위가 이미 있습니다.");const materialPrice=num(row.querySelector(".inline-material").value),units=m.units.map(x=>x.id===u.id?{...x,unitName,materialPrice,purchase:materialPrice+num(x.deliveryPrice),sellEx:num(row.querySelector(".inline-sell-ex").value),sellIn:num(row.querySelector(".inline-sell-in").value)}:x);await backup(`수정 전: ${m.name} / ${u.unitName}`);await putMany([{...m,name,units,updatedAt:now()}]);inlineEditingKey=null;await reload();toast("수정 내용을 저장했습니다.")}catch(e){toast(e.message||"수정에 실패했습니다.",true)}}
+
+function cell(label,text,cls=""){const td=document.createElement("td");td.dataset.label=label;td.textContent=text;if(cls)td.className=cls;return td}
+async function persistOrder(){const keys=[...$("listBody").querySelectorAll("tr[data-key]")].map(x=>x.dataset.key);if(keys.length!==entries().length)return;await backup("자재 순서 변경 전");const changed=new Set();keys.forEach((key,i)=>{const [mid,uidValue]=key.split("::"),m=materials.find(x=>String(x.id)===mid),u=m?.units.find(x=>String(x.id)===uidValue);if(u){u.order=i+1;m.updatedAt=now();changed.add(m)}});await putMany([...changed]);await reload();toast("자재 순서를 저장했습니다.")}
+function moveRow(dragged,target,y){if(!dragged||!target||dragged===target)return;const box=target.getBoundingClientRect();$("listBody").insertBefore(dragged,y<box.top+box.height/2?target:target.nextSibling)}
+function reorderable(tr){let dragging=false,touching=false,timer=null,moved=false;tr.draggable=true;tr.ondragstart=e=>{dragging=true;tr.classList.add("dragging");e.dataTransfer?.setData("text/plain",tr.dataset.key)};tr.ondragover=e=>{e.preventDefault();moveRow(document.querySelector(".dragging"),tr,e.clientY)};tr.ondragend=async()=>{tr.classList.remove("dragging");if(dragging){dragging=false;await persistOrder()}};tr.onpointerdown=e=>{if(e.pointerType==="mouse"||e.target.closest("button,input"))return;moved=false;timer=setTimeout(()=>{touching=true;tr.classList.add("dragging");navigator.vibrate?.(30)},450)};tr.onpointermove=e=>{if(!touching)return;e.preventDefault();moved=true;const target=document.elementFromPoint(e.clientX,e.clientY)?.closest("#listBody tr[data-key]");moveRow(tr,target,e.clientY)};const end=async()=>{clearTimeout(timer);if(!touching)return;touching=false;tr.classList.remove("dragging");if(moved)await persistOrder()};tr.onpointerup=end;tr.onpointercancel=end}
+function render(){const q=norm($("search").value);$("listBody").innerHTML="";let rows=0;entries().forEach(({m,u})=>{if(q&&!norm(m.name).includes(q)&&!norm(u.unitName).includes(q))return;rows++;const key=`${m.id}:${u.id}`,tr=document.createElement("tr"),td=cell("관리",""),box=document.createElement("div");tr.dataset.key=`${m.id}::${u.id}`;box.className="manage";if(inlineEditingKey===key){tr.className="editing-row";tr.append(inputCell("자재명",inlineInput("inline-name",m.name,"자재명")),inputCell("단위",inlineInput("inline-unit",u.unitName,"단위")),inputCell("자재가",inlineInput("inline-material",u.materialPrice,"자재가",true)),inputCell("판매(제외)",inlineInput("inline-sell-ex",u.sellEx,"판매 배송비 제외",true)),inputCell("판매(포함)",inlineInput("inline-sell-in",u.sellIn,"판매 배송비 포함",true)));const save=document.createElement("button"),cancel=document.createElement("button");save.className="inline-save";save.textContent="저장";save.onclick=()=>saveInline(m.id,u.id,tr);cancel.className="cancel-btn";cancel.textContent="취소";cancel.onclick=()=>{inlineEditingKey=null;render()};box.append(save,cancel)}else{tr.append(cell("자재명",m.name),cell("단위",u.unitName),cell("자재가",money(u.materialPrice),"price"),cell("판매(제외)",money(u.sellEx),"price"),cell("판매(포함)",money(u.sellIn),"price"));const edit=document.createElement("button"),del=document.createElement("button");edit.className="edit-btn";edit.textContent="수정";edit.onclick=()=>{inlineEditingKey=key;render();document.querySelector(".editing-row .inline-name")?.focus()};del.className="delete-btn";del.textContent="삭제";del.onclick=()=>deleteUnit(m.id,u.id);box.append(edit,del);if(!q)reorderable(tr)}td.append(box);tr.append(td);$("listBody").append(tr)});$("empty").classList.toggle("hidden",rows>0);$("materialCount").textContent=materials.length.toLocaleString();const latest=materials.map(m=>m.updatedAt).filter(Boolean).sort().pop();$("lastUpdated").textContent=dateText(latest)}
+
+function xlsx(){if(!window.XLSX)throw new Error("엑셀 기능 파일을 찾지 못했습니다.")}
+const headers=["자재명","단위","자재가격","운반비","판매가격(배송비 제외)","판매가격(배송비 포함)"];
+function excelRows(){return entries().map(({m,u})=>({자재명:m.name,단위:u.unitName,자재가격:num(u.materialPrice),운반비:num(u.deliveryPrice),"판매가격(배송비 제외)":num(u.sellEx),"판매가격(배송비 포함)":num(u.sellIn)}))}
+function widths(ws){ws["!cols"]=[{wch:28},{wch:15},{wch:15},{wch:15},{wch:23},{wch:23}]}
+function template(){try{xlsx();const ws=XLSX.utils.aoa_to_sheet([headers]);widths(ws);const guide=XLSX.utils.aoa_to_sheet([["작성방법"],["자재 한 단위당 한 줄씩 작성하세요."],["자재명과 단위는 반드시 입력하세요."],["한 줄만 작성해도 기존 목록에 그 자재만 추가됩니다."],["기존 자재는 엑셀 불러오기로 삭제되지 않습니다."]]);guide["!cols"]=[{wch:70}];const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"자재입력");XLSX.utils.book_append_sheet(wb,guide,"작성방법");XLSX.writeFile(wb,"자재입력_빈양식.xlsx");toast("빈 엑셀 양식을 저장했습니다.")}catch(e){toast(e.message,true)}}
+function exportExcel(){try{xlsx();if(!materials.length)throw new Error("내보낼 자재가 없습니다.");const ws=XLSX.utils.json_to_sheet(excelRows(),{header:headers});widths(ws);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"자재목록");XLSX.writeFile(wb,`자재가격목록_${fileDate()}.xlsx`);toast("전체 자재를 엑셀로 저장했습니다.")}catch(e){toast(e.message,true)}}
+function pick(row,names){for(const [k,v] of Object.entries(row))if(names.some(n=>norm(k)===norm(n)))return v;return ""}
+function price(v){if(typeof v==="number")return v>=0?{ok:true,v:Math.round(v)}:{ok:false,v:0};const s=String(v??"").trim();if(!s)return{ok:true,v:0};const c=s.replace(/[\s,₩원]/g,"");return /^\d+$/.test(c)?{ok:true,v:Number(c)}:{ok:false,v:0}}
+function parseRows(raw){const valid=[],errors=[];raw.forEach((r,i)=>{const line=i+2,name=String(pick(r,["자재명","자재 명칭","명칭"])).trim(),unitName=String(pick(r,["단위","단위명"])).trim();if(!name&&!unitName&&Object.values(r).every(v=>!String(v).trim()))return;if(!name){errors.push(`${line}행: 자재명이 없습니다.`);return}if(!unitName){errors.push(`${line}행: 단위가 없습니다.`);return}const ps=[pick(r,["자재가격","자재가","입고가격"]),pick(r,["운반비","입고 운반비"]),pick(r,["판매가격(배송비 제외)","판매(제외)","판매가(배송 제외)"]),pick(r,["판매가격(배송비 포함)","판매(포함)","판매가(배송 포함)"])].map(price);if(ps.some(x=>!x.ok)){errors.push(`${line}행: 가격은 숫자로 입력해주세요.`);return}valid.push({name,unitName,materialPrice:ps[0].v,deliveryPrice:ps[1].v,sellEx:ps[2].v,sellIn:ps[3].v})});return{valid,errors}}
+function analyze(valid){const map=new Map(materials.map(m=>[norm(m.name),new Set(m.units.map(u=>norm(u.unitName)))]));let newM=0,newU=0,dups=0;valid.forEach(r=>{const nk=norm(r.name),uk=norm(r.unitName);if(!map.has(nk)){map.set(nk,new Set());newM++}const set=map.get(nk);set.has(uk)?dups++:(set.add(uk),newU++)});return{newM,newU,dups}}
+async function readExcel(file){xlsx();const wb=XLSX.read(await file.arrayBuffer(),{type:"array"}),sheet=wb.Sheets[wb.SheetNames[0]];if(!sheet)throw new Error("엑셀 시트가 없습니다.");const raw=XLSX.utils.sheet_to_json(sheet,{defval:"",raw:true});if(!raw.length)throw new Error("입력된 자재가 없습니다.");const parsed=parseRows(raw);return{fileName:file.name,...parsed,...analyze(parsed.valid)}}
+function openPreview(p){pending=p;$("fileName").textContent=p.fileName;$("newMaterials").textContent=p.newM;$("newUnits").textContent=p.newU;$("duplicates").textContent=p.dups;$("errors").textContent=p.errors.length;$("updateDuplicates").checked=false;$("errorList").innerHTML=p.errors.map(x=>`<div>${x.replace(/[<>&]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[c]))}</div>`).join("");$("errorList").classList.toggle("hidden",!p.errors.length);$("confirmImport").disabled=!p.valid.length;$("modal").classList.remove("hidden")}
+function closePreview(){pending=null;$("modal").classList.add("hidden");$("excelFile").value=""}
+async function importExcel(){if(!pending)return;const next=clone(materials),map=new Map(next.map(m=>[norm(m.name),m])),original=new Set(materials.map(m=>m.id)),changed=new Set();let addedM=0,addedU=0,updated=0,skipped=0,order=nextOrder();const t=now();pending.valid.forEach(r=>{let m=map.get(norm(r.name));if(!m){m={id:uid(),name:r.name,units:[],createdAt:t,updatedAt:t};next.push(m);map.set(norm(r.name),m);addedM++}let u=m.units.find(x=>norm(x.unitName)===norm(r.unitName));if(!u){m.units.push({id:uid(),unitName:r.unitName,materialPrice:r.materialPrice,deliveryPrice:r.deliveryPrice,purchase:r.materialPrice+r.deliveryPrice,sellEx:r.sellEx,sellIn:r.sellIn,order:order++});m.updatedAt=t;changed.add(m.id);addedU++}else if($("updateDuplicates").checked){Object.assign(u,{materialPrice:r.materialPrice,deliveryPrice:r.deliveryPrice,purchase:r.materialPrice+r.deliveryPrice,sellEx:r.sellEx,sellIn:r.sellIn});m.updatedAt=t;changed.add(m.id);updated++}else skipped++});if(![...original].every(id=>next.some(m=>m.id===id))||next.length<materials.length||next.reduce((a,m)=>a+m.units.length,0)<materials.reduce((a,m)=>a+m.units.length,0)){toast("기존 자료 감소가 감지되어 중단했습니다.",true);return}if(!changed.size){closePreview();toast("추가할 신규 항목이 없습니다.");return}try{await backup(`엑셀 추가 전: ${pending.fileName}`);await putMany(next.filter(m=>changed.has(m.id)));closePreview();await reload();toast(`완료: 신규 자재 ${addedM}, 신규 단위 ${addedU}, 수정 ${updated}, 중복 유지 ${skipped}`)}catch(e){toast(e.message||"가져오기에 실패했습니다.",true)}}
+async function restore(){try{const list=(await all(BACKUPS)).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)),target=list[0];if(!target)throw new Error("복구할 백업이 없습니다.");if(!confirm(`최근 백업으로 복구할까요?\n${dateText(target.createdAt)} / 자재 ${target.materials.length}개`))return;await backup("복구 직전");await replaceAll(target.materials);reset();await reload();toast("이전 목록으로 복구했습니다.")}catch(e){toast(e.message,true)}}
+
+function events(){$("addUnitBtn").onclick=()=>$("unitBody").append(unitRow());$("resetBtn").onclick=()=>reset(true);$("saveBtn").onclick=saveForm;$("materialName").oninput=searchMaterials;$("materialName").onfocus=()=>{if($("materialName").value.trim())searchMaterials()};$("search").oninput=render;$("templateBtn").onclick=template;$("exportBtn").onclick=exportExcel;$("importBtn").onclick=()=>$("excelFile").click();$("excelFile").onchange=async()=>{const f=$("excelFile").files[0];if(!f)return;try{openPreview(await readExcel(f))}catch(e){$("excelFile").value="";toast(e.message,true)}};$("confirmImport").onclick=importExcel;$("restoreBtn").onclick=restore;document.addEventListener("click",e=>{if(!e.target.closest(".material-search"))hideMaterialResults()});document.querySelectorAll("[data-close]").forEach(x=>x.onclick=closePreview);$("migrationClose").onclick=()=>$("migration").classList.add("hidden")}
+async function init(){try{db=await openDb();const moved=await migrate();reset();events();await reload();if(moved){$("migrationText").textContent=`자재 ${moved.m}개와 단위 ${moved.u}개를 새 저장소에 복사했고 원본도 보존했습니다.`;$("migration").classList.remove("hidden")}}catch(e){console.error(e);toast(e.message||"프로그램을 시작하지 못했습니다.",true)}}
+window.addEventListener("unhandledrejection",e=>toast(e.reason?.message||"오류가 발생했습니다.",true));init();
